@@ -1,0 +1,786 @@
+{
+  "name": "Web Scrapping Dummy",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1264,
+        144
+      ],
+      "id": "547fad65-e4fb-439d-84e6-e752a38ca986",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://weworkremotely.com/categories/remote-customer-support-jobs.rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -1056,
+        144
+      ],
+      "id": "a1d7cf4a-e385-4cc9-a39c-350427d90e4c",
+      "name": "RSS Read"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f8868bd1-9b04-4acd-aba6-06a0182f6adb",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "04cbf1ab-fc40-4be4-9f9c-1b4d9c8bdfef",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "8e11b08d-3025-4517-8162-32898224bc33",
+              "name": "pubDate",
+              "value": "={{ $json.pubDate }}",
+              "type": "string"
+            },
+            {
+              "id": "b1867b2b-669f-4907-a5a5-287fef858b6e",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            },
+            {
+              "id": "742b056c-5483-4600-947d-1cd25af7c785",
+              "name": "lastPubDate",
+              "value": "2025-08-17T00:36:49Z",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -816,
+        144
+      ],
+      "id": "0c5cd41a-0c82-4c89-a8ed-198a2a77410b",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a concise job summarizer.\n\nGiven the job info below, summarize the {{ $json.content }} Max 250 characters.\n\nJob title: {{ $json.title }}\nJob link: {{ $json.link }}\nDate posted: {{ $json.pubDate }}\nDescription: {{ $json.content }}\n\nafter that, Return ONLY valid JSON in this format:\n{\n  \"title\": \"{{ $json.title }}\",\n  \"link\": \"{{ $json.link }}\",\n  \"pubDate\": \"{{ $json.pubDate }}\",\n  \"content\": \"2-sentence summary of the job\",\n  \"lastPubDate\":\"{{ $json.lastPubDate }}\"\n}\n",
+        "batching": {
+          "batchSize": 10,
+          "delayBetweenBatches": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -416,
+        368
+      ],
+      "id": "b3f5c94f-da31-4aea-a445-9c90c8d40618",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1216,
+        416
+      ],
+      "id": "f4182f5b-d094-4609-a3b6-218dbcf03953",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1200,
+        656
+      ],
+      "id": "b404a2a4-4c1a-4ba4-9282-cbb5ad0f0bd0",
+      "name": "Wait",
+      "webhookId": "3ae5161f-a896-4d1e-87e1-f67696b9fdd4"
+    },
+    {
+      "parameters": {
+        "maxItems": 50
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        144
+      ],
+      "id": "d27c81d3-3f3e-4bc4-887e-48368d48eed6",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  try {\n    let raw = item.json.text || \"\";\n    raw = raw.replace(/```json|```/g, \"\").trim();\n\n    // Parse each job into a JSON object\n    const parsed = JSON.parse(raw);\n\n    results.push({ json: parsed });\n  } catch (error) {\n    // Keep original if parsing fails, so you don’t lose it\n    results.push(item);\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        368
+      ],
+      "id": "fcb2a77d-1887-4fc6-b347-5b5d30014380",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "07d224b7-f637-4b31-9e79-4746c68796da",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "Remote",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "b8784bdc-1c21-479b-8cda-174fd72c8d43",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "Work From Home",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "eccc8e63-9344-4039-8e0d-79f3d6fc8e5b",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "WFH",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "e98e9a07-dea9-4eaf-8641-c2a32103634e",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "REMOTE",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "5bc52755-ad87-478c-8fd8-110936494750",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "PHILIPPINES",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "e3e26559-e048-47a6-aea3-b6f132d4ebf3",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "Philippines",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -688,
+        384
+      ],
+      "id": "cc5ae426-9adb-414c-b959-bb28e1c5b46f",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "gpt-5-nano"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        544
+      ],
+      "id": "8197c4f4-1a6e-4faa-bd6a-4a7938df6780",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "ZD6c9rqrf3Nn39vi",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f0fb932b-660c-45a8-9386-3a44624c1c26",
+              "leftValue": "={{ $json.pubDate }}",
+              "rightValue": "={{ $json.lastPubDate }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -928,
+        400
+      ],
+      "id": "ae5c81b9-4be4-4ece-9835-54e51873c42d",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "pubDate",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        144,
+        32
+      ],
+      "id": "b6864dfd-75cc-48e1-bffc-62345abb8c84",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75e5add5-dab2-4eef-8af9-7cdd87f894bb",
+              "name": "pubDate",
+              "value": "={{ $json.pubDate }}",
+              "type": "string"
+            },
+            {
+              "id": "bed32d21-0ce2-4dfb-86cb-b673add74628",
+              "name": "lastPubDate",
+              "value": "={{ $json.lastPubDate }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        336,
+        32
+      ],
+      "id": "d36c98c3-eb04-4ace-9648-bdd16c450f24",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zENT7qn0cacF54QZ7OLP2Os1mJUhgo4rPVQgWYVcs7w",
+          "mode": "list",
+          "cachedResultName": "job listing d3",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "lastPubDate"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        544,
+        32
+      ],
+      "id": "4c67a059-d483-445d-8788-773bf5a9bd7f",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XNCVVX1rjMUarzTZ",
+          "name": "keima account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1zENT7qn0cacF54QZ7OLP2Os1mJUhgo4rPVQgWYVcs7w",
+          "mode": "list",
+          "cachedResultName": "job listing d3",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $json.title }}",
+            "link": "={{ $json.link }}",
+            "content": "={{ $json.content }}",
+            "pubDate": "={{ $json.pubDate }}"
+          },
+          "matchingColumns": [
+            "title"
+          ],
+          "schema": [
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "pubDate",
+              "displayName": "pubDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -16,
+        32
+      ],
+      "id": "b887b2ad-b058-4a1c-b065-22f4c7552224",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XNCVVX1rjMUarzTZ",
+          "name": "keima account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Optional node to limit number of items processed per run. \nSet to 50 to avoid overloading workflow with too many jobs.",
+        "height": 272,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        32
+      ],
+      "id": "fe6b098e-8d73-4efb-9174-99ea24eb4022",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Selects and cleans the relevant fields from the RSS items.\nKeeps only title, link, pubDate, content.",
+        "height": 272,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        32
+      ],
+      "id": "75746e15-7cae-41ef-a721-3801a04c7873",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Fetches the latest remote job postings from the RSS feed. \nOnly fetches the feed URL set here.",
+        "height": 272
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        32
+      ],
+      "id": "82a02749-c5c3-4148-8e9d-b9ecc2e8ab36",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Processes each RSS item individually. \nFeeds items into IF nodes for filtering \nand further processing.",
+        "height": 512,
+        "width": 544
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        368
+      ],
+      "id": "5b84ea31-8f61-453b-a608-34419388d8b5",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\nFilters out jobs already processed. datetoday>lastPubDate\nOnly items posted after lastPubDate continue.",
+        "height": 448,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -976,
+        368
+      ],
+      "id": "19d2605b-99da-4981-82a8-51ad428def50",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\nFilters jobs by relevant keywords. \nOnly jobs containing keywords pass to LLM summarization.",
+        "height": 448,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        368
+      ],
+      "id": "6823e7f1-518e-4a24-858b-167f776e896b",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n  LLM Summarizer + Function Node:\n\n -Takes the job details (title, link, pubDate, content)      \n - Summarizes the job in 2 sentences\n-Parses the cleaned text into proper JSON",
+        "height": 608,
+        "width": 576
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        320
+      ],
+      "id": "8df7880e-9921-42ba-bcc2-88b727558a2c",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Adds the processed jobs to Google Sheets, then sorts by the most recent posting. \nSet Node captures the newest pubDate as the new lastPubDate. \nGoogle Sheets Update writes this lastPubDate to the forPubDate sheet (our point of reference) \nso the next workflow run only processes new jobs.",
+        "height": 384,
+        "width": 848,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -112
+      ],
+      "id": "369e7383-e3ce-4998-8e04-75cda17c2b92",
+      "name": "Sticky Note7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b5dbfa38-8fe5-4b2e-90a7-2bf715a3ae15",
+  "meta": {
+    "instanceId": "778edabc3a9980ce751c2d14a1ab93f1ec4ccf89d4e11006cf487ab79404df1d"
+  },
+  "id": "SSkUo6sp9mFgSzju",
+  "tags": []
+}
